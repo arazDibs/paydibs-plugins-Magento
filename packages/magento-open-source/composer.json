@@ -2,6 +2,7 @@
     "name": "paydibs/module-paymentgateway",
     "description": "Paydibs payment gateway for Magento Open Source (Magento 2.4.x).",
     "type": "magento2-module",
+    "version": "103.0.0",
     "license": "proprietary",
     "authors": [
         {

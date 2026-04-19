@@ -13,3 +13,9 @@ This creates (gitignored *.zip):
 
 Upload the ZIP that matches your listing. The archive root contains composer.json, registration.php,
 and the module tree expected by Composer path installs and Marketplace validation.
+
+composer.json includes "version": "103.0.0" — use Marketplace Version Number v103.0.0 (verified from package).
+
+Form copy-paste help: docs/marketplace/TECHNICAL_SUBMISSION.md
+Release notes text: docs/marketplace/RELEASE_NOTES_FOR_PORTAL.txt
+PDF (print from browser): docs/marketplace/Paydibs-PaymentGateway-Installation-and-User-Guide.html

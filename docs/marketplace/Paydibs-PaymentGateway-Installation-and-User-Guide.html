@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paydibs Payment Gateway — Installation &amp; User Guide</title>
+  <style>
+    @page { margin: 2cm; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.45; color: #222; max-width: 48rem; margin: 0 auto; padding: 1rem 1.5rem 3rem; }
+    h1 { font-size: 1.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.35rem; }
+    h2 { font-size: 1.15rem; margin-top: 1.75rem; }
+    h3 { font-size: 1rem; margin-top: 1.25rem; }
+    code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.88rem; }
+    pre { background: #f6f6f6; padding: 0.75rem 1rem; overflow-x: auto; border: 1px solid #e0e0e0; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.92rem; margin: 0.75rem 0; }
+    th, td { border: 1px solid #ccc; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f0f0f0; }
+    ul { padding-left: 1.25rem; }
+    .meta { color: #555; font-size: 0.9rem; margin-bottom: 2rem; }
+    @media print {
+      body { padding: 0; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; color: #666; }
+    }
+  </style>
+</head>
+<body>
+  <p class="meta">Paydibs Payment Gateway · Extension version 103.0.0 · Adobe Commerce &amp; Magento Open Source 2.4.x</p>
+  <h1>Installation</h1>
+
+  <h2>Requirements</h2>
+  <ul>
+    <li>Adobe Commerce or Magento Open Source <strong>2.4.x</strong> (see the extension <code>composer.json</code> for <code>magento/framework</code> and module constraints).</li>
+    <li>PHP version supported by your Magento installation (see <code>require.php</code> in the extension <code>composer.json</code>).</li>
+  </ul>
+
+  <h2>Install via Composer (recommended)</h2>
+  <p><strong>Magento Open Source</strong></p>
+  <pre><code>composer require paydibs/module-paymentgateway
+bin/magento module:enable Paydibs_PaymentGateway
+bin/magento setup:upgrade
+bin/magento setup:di:compile
+bin/magento cache:flush</code></pre>
+
+  <p><strong>Adobe Commerce / Commerce Cloud</strong> (Commerce package name)</p>
+  <pre><code>composer require paydibs/module-paymentgateway-commerce
+bin/magento module:enable Paydibs_PaymentGateway
+bin/magento setup:upgrade
+bin/magento setup:di:compile
+bin/magento cache:flush</code></pre>
+
+  <p>If you install from a <strong>path repository</strong>, point Composer at the extracted package directory as appropriate.</p>
+
+  <h2>Install from ZIP (Marketplace / manual)</h2>
+  <ol>
+    <li>Extract the Composer package so it matches a normal Composer install layout under <code>vendor/</code>, or follow your agency’s <code>app/code</code> workflow if applicable.</li>
+    <li>Run <code>bin/magento module:enable Paydibs_PaymentGateway</code>, then <code>setup:upgrade</code>, <code>setup:di:compile</code>, and <code>cache:flush</code> as above.</li>
+  </ol>
+
+  <h2>After installation</h2>
+  <p>Configure credentials under <strong>Stores → Configuration → Sales → Payment Methods → Paydibs Payment Gateway</strong>. Field descriptions are in the User Guide below.</p>
+
+  <h1>User guide</h1>
+
+  <h2>Overview</h2>
+  <p>The extension adds <strong>Paydibs</strong> as a payment method. Checkout places an order in <strong>pending payment</strong>, then sends the customer to <strong>Paydibs</strong> to pay. The store updates order status from <strong>return URLs</strong>, <strong>server notifications (IPN)</strong>, and optional <strong>cron</strong> / <strong>manual requery</strong> flows.</p>
+
+  <h2>Configuration (Admin)</h2>
+  <p><strong>Stores → Configuration → Sales → Payment Methods → Paydibs Payment Gateway</strong></p>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Enabled</td><td>Turn the method on or off.</td></tr>
+      <tr><td>Title</td><td>Label shoppers see at checkout.</td></tr>
+      <tr><td>API Environment</td><td><strong>Test</strong> vs <strong>Production</strong> (affects API endpoints).</td></tr>
+      <tr><td>Merchant ID</td><td>Issued by Paydibs.</td></tr>
+      <tr><td>Merchant Password</td><td>Issued by Paydibs; stored encrypted by Magento.</td></tr>
+      <tr><td>Page Timeout</td><td>Paydibs hosted page timeout (seconds).</td></tr>
+      <tr><td>Sort Order</td><td>Checkout payment list order.</td></tr>
+      <tr><td>Enabled Log</td><td>When <strong>Yes</strong>, diagnostic messages go to <code>var/log/paydibs.log</code> (signatures and secrets are not logged in full).</td></tr>
+      <tr><td>Restore Cart on Failed Payment</td><td>When <strong>Yes</strong>, failed or cancelled payments attempt to reactivate the quote for checkout.</td></tr>
+      <tr><td>Manual Requery Secret Key</td><td>If set, calling <code>paydibs/payment/requery?key=&lt;secret&gt;</code> runs the pending-order query job; leave empty to disable.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Checkout flow (customer)</h2>
+  <ol>
+    <li>Customer chooses <strong>Paydibs</strong> and places the order.</li>
+    <li>The browser is sent to <strong>Paydibs</strong> using the prepared payment URL.</li>
+    <li>On success or failure, Paydibs redirects back to the store; the order is updated accordingly.</li>
+  </ol>
+
+  <h2>Operational features</h2>
+  <ul>
+    <li><strong>Cron</strong> (<code>paydibs_query_pending_orders</code>): Periodically queries pending-payment Paydibs orders (schedule in <code>etc/crontab.xml</code>).</li>
+    <li><strong>Manual requery</strong>: Optional secret-protected URL for support (see Manual Requery Secret Key).</li>
+  </ul>
+
+  <h2>Security notes</h2>
+  <ul>
+    <li><strong>Response</strong> and <strong>Notify</strong> validate Paydibs payloads using signed fields as implemented in the extension.</li>
+    <li>When logging is enabled, logs avoid full <strong>Sign</strong> values and avoid logging full query URLs that contain secrets.</li>
+  </ul>
+
+  <h2>Support</h2>
+  <p>Use your Paydibs merchant support channel and the extension GitHub issue tracker listed in <code>composer.json</code> under <code>support.issues</code>, if applicable.</p>
+</body>
+</html>
