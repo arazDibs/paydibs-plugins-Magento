@@ -1,0 +1,12 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Archives (source lives in packages/)
+*.zip
+
+# Composer (if used at repo root later)
+/vendor/
+composer.lock
