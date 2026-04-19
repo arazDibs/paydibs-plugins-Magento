@@ -18,6 +18,7 @@ use Magento\Sales\Model\Service\InvoiceService;
 use Magento\Sales\Model\Order\Email\Sender\InvoiceSender;
 use Magento\Sales\Model\Order\Email\Sender\OrderSender;
 use Paydibs\PaymentGateway\Model\PaymentMethod;
+use Paydibs\PaymentGateway\Model\Log\GatewayParamsSanitizer;
 
 class PaymentQueryService
 {
@@ -113,13 +114,11 @@ class PaymentQueryService
             $params['MerchantPymtID'] .
             $params['MerchantTxnAmt'] .
             $params['MerchantCurrCode'];
-            
-        $this->paymentMethod->log('Query: Request signature string (without password): ' . 
-            $params['MerchantID'] .
-            $params['MerchantPymtID'] .
-            $params['MerchantTxnAmt'] .
-            $params['MerchantCurrCode']);
-            
+
+        $this->paymentMethod->log('Query: building request signature', [
+            'merchant_pymt_id' => $params['MerchantPymtID'] ?? '',
+        ]);
+
         // Generate SHA512 hash
         $signature = hash('sha512', $signatureString);
         
@@ -156,16 +155,6 @@ class PaymentQueryService
             $signatureString .= isset($response[$field]) ? $response[$field] : '';
         }
         
-        $this->paymentMethod->log('Query: Response signature string (without password): ' . 
-            (isset($response['MerchantID']) ? $response['MerchantID'] : '') .
-            (isset($response['MerchantPymtID']) ? $response['MerchantPymtID'] : '') .
-            (isset($response['PTxnID']) ? $response['PTxnID'] : '') .
-            (isset($response['MerchantOrdID']) ? $response['MerchantOrdID'] : '') .
-            (isset($response['MerchantTxnAmt']) ? $response['MerchantTxnAmt'] : '') .
-            (isset($response['MerchantCurrCode']) ? $response['MerchantCurrCode'] : '') .
-            (isset($response['PTxnStatus']) ? $response['PTxnStatus'] : '') .
-            (isset($response['AuthCode']) ? $response['AuthCode'] : ''));
-        
         $expectedSignature = hash('sha512', $signatureString);
         $actualSignature = $response['Sign'];
         
@@ -180,7 +169,7 @@ class PaymentQueryService
      */
     public function queryPaymentStatus(OrderInterface $order)
     {
-        $this->paymentMethod->log('Query: Querying payment status for order #' . $order->getIncrementId());
+        $this->paymentMethod->log('Query: querying payment status', ['increment_id' => $order->getIncrementId()]);
         $apiUrl = $this->paymentMethod->getApiUrl();
         $params = [
             'TxnType' => 'QUERY',
@@ -193,14 +182,20 @@ class PaymentQueryService
         $params['Sign'] = $this->generateQueryRequestSignature($params);
         
         $queryUrl = $apiUrl . '?' . http_build_query($params);
-        
-        $this->paymentMethod->log('Query: Query URL: ' . $queryUrl);
-        
+
+        $this->paymentMethod->log('Query: HTTP GET', [
+            'increment_id' => $order->getIncrementId(),
+            'endpoint' => $apiUrl,
+        ]);
+
         try {
             $this->curl->get($queryUrl);
             $response = $this->curl->getBody();
             $responseParams = $this->json->unserialize($response);
-            $this->paymentMethod->log('Query: Parsed response: ' . print_r($responseParams, true));
+            $sanitized = is_array($responseParams)
+                ? GatewayParamsSanitizer::sanitizeQueryResponse($responseParams)
+                : [];
+            $this->paymentMethod->log('Query: parsed response', ['response' => $sanitized]);
             
             return $responseParams;
         } catch (\Exception $e) {

@@ -14,8 +14,7 @@ use Magento\Framework\Registry;
 use Magento\Payment\Helper\Data;
 use Magento\Payment\Model\Method\AbstractMethod;
 use Magento\Payment\Model\Method\Logger;
-use Magento\Framework\Filesystem\DirectoryList;
-use Magento\Framework\Filesystem\Driver\File;
+use Psr\Log\LoggerInterface;
 
 /**
  * Paydibs Payment Gateway payment method model
@@ -25,7 +24,6 @@ use Magento\Framework\Filesystem\Driver\File;
 class PaymentMethod extends AbstractMethod
 {
     public const PAYMENT_METHOD_PAYDIBS_CODE = 'paydibs_payment_gateway';
-    public const LOG_FILE = 'paydibs.log';
 
     /**
      * Payment method code
@@ -132,14 +130,11 @@ class PaymentMethod extends AbstractMethod
     protected $urlBuilder;
 
     /**
-     * @var DirectoryList
+     * Dedicated PSR-3 logger (see etc/di.xml → var/log/paydibs.log).
+     *
+     * @var LoggerInterface
      */
-    protected $directoryList;
-
-    /**
-     * @var File
-     */
-    protected $file;
+    private $paydibsPsrLogger;
 
     /**
      * @param Context $context
@@ -150,8 +145,7 @@ class PaymentMethod extends AbstractMethod
      * @param ScopeConfigInterface $scopeConfig
      * @param Logger $logger
      * @param \Magento\Framework\UrlInterface $urlBuilder
-     * @param DirectoryList $directoryList
-     * @param File $file
+     * @param LoggerInterface $paydibsPsrLogger
      * @param AbstractResource|null $resource
      * @param AbstractDb|null $resourceCollection
      * @param array $data
@@ -165,8 +159,7 @@ class PaymentMethod extends AbstractMethod
         ScopeConfigInterface $scopeConfig,
         Logger $logger,
         \Magento\Framework\UrlInterface $urlBuilder,
-        DirectoryList $directoryList,
-        File $file,
+        LoggerInterface $paydibsPsrLogger,
         ?AbstractResource $resource = null,
         ?AbstractDb $resourceCollection = null,
         array $data = []
@@ -185,8 +178,7 @@ class PaymentMethod extends AbstractMethod
         );
         $this->scopeConfig = $scopeConfig;
         $this->urlBuilder = $urlBuilder;
-        $this->directoryList = $directoryList;
-        $this->file = $file;
+        $this->paydibsPsrLogger = $paydibsPsrLogger;
     }
 
     /**
@@ -200,25 +192,18 @@ class PaymentMethod extends AbstractMethod
     }
 
     /**
-     * Log message to paydibs.log if logging is enabled
+     * PSR-3 info logging when admin enables "Enabled Log" (writes via Monolog handler in di.xml).
      *
      * @param string $message
+     * @param array<string, mixed> $context
      * @return void
      */
-    public function log($message)
+    public function log($message, array $context = [])
     {
         if (!$this->isLoggingEnabled()) {
             return;
         }
-
-        try {
-            $logPath = $this->directoryList->getPath('var') . DIRECTORY_SEPARATOR . 'log' . DIRECTORY_SEPARATOR . self::LOG_FILE;
-            $timestamp = date('Y-m-d H:i:s');
-            $formattedMessage = "[{$timestamp}] [Paydibs] {$message}" . PHP_EOL;
-            $this->file->filePutContents($logPath, $formattedMessage, FILE_APPEND);
-        } catch (\Exception $e) {
-            $this->_logger->error($e->getMessage());
-        }
+        $this->paydibsPsrLogger->info((string) $message, $context);
     }
 
     /**
@@ -255,7 +240,7 @@ class PaymentMethod extends AbstractMethod
         $timeout = $this->getConfigData('page_timeout');
         return empty($timeout) ? 300 : (int)$timeout;
     }
-    
+
     /**
      * Get Merchant Password from configuration
      *
@@ -280,14 +265,14 @@ class PaymentMethod extends AbstractMethod
     {
         /** @var \Magento\Sales\Model\Order\Payment $payment */
         $payment = $this->getInfoInstance();
-        
+
         /** @var \Magento\Sales\Model\Order $order */
         $order = $payment->getOrder();
-        
-        $this->log('Initialize payment method for order #' . $order->getIncrementId());
-        
+
+        $this->log('Initialize payment method for order', ['increment_id' => $order->getIncrementId()]);
+
         $order->setCanSendNewEmailFlag(false);
-        
+
         $stateObject->setState(\Magento\Sales\Model\Order::STATE_PENDING_PAYMENT);
         $stateObject->setStatus('pending_payment');
         $stateObject->setIsNotified(false);
@@ -296,13 +281,13 @@ class PaymentMethod extends AbstractMethod
             'redirect_url',
             $redirectUrl
         );
-        
+
         return $this;
     }
 
     /**
      * Get redirect URL
-     * 
+     *
      * Return null since we're using the Prepare controller for redirection
      * instead of Magento's core redirect mechanism
      *
@@ -312,7 +297,7 @@ class PaymentMethod extends AbstractMethod
     {
         return null;
     }
-    
+
     /**
      * Check if cart restoration is enabled
      *

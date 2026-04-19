@@ -5,6 +5,8 @@
 namespace Paydibs\PaymentGateway\Controller\Payment;
 
 use Magento\Framework\App\Action\Action;
+use Magento\Framework\App\Action\HttpGetActionInterface;
+use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\Action\Context;
 use Magento\Checkout\Model\Session;
 use Magento\Sales\Model\OrderFactory;
@@ -21,9 +23,10 @@ use Magento\Sales\Model\Service\InvoiceService;
 use Magento\Framework\DB\TransactionFactory as DbTransactionFactory;
 use Magento\Sales\Model\Order\Email\Sender\InvoiceSender;
 use Paydibs\PaymentGateway\Model\Service\QuoteManagement;
+use Paydibs\PaymentGateway\Model\Log\GatewayParamsSanitizer;
 use Psr\Log\LoggerInterface;
 
-class Response extends Action implements CsrfAwareActionInterface
+class Response extends Action implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwareActionInterface
 {
     /**
      * @var Session
@@ -147,12 +150,15 @@ class Response extends Action implements CsrfAwareActionInterface
     
     public function execute()
     {
-        $this->paymentMethod->log('Response: Request received: ' . print_r($this->getRequest()->getParams(), true));
         $params = $this->getRequest()->getParams();
-        
+
         if ($this->getRequest()->isPost()) {
             $params = $this->getRequest()->getPostValue();
         }
+
+        $this->paymentMethod->log('Response: gateway callback', [
+            'params' => GatewayParamsSanitizer::sanitizeGatewayParams(is_array($params) ? $params : []),
+        ]);
         
         if (!isset($params['MerchantPymtID']) || !isset($params['PTxnStatus']) || !isset($params['PTxnID'])) {
             $this->messageManager->addErrorMessage(__('Invalid payment response received.'));
@@ -194,11 +200,8 @@ class Response extends Action implements CsrfAwareActionInterface
         
         $txnStatus = $params['PTxnStatus'];
 
-        
-        if ($order->getCustomerId() && !$this->customerSession->isLoggedIn()) {
-            $this->customerSession->loginById($order->getCustomerId());
-        }   
-        
+        $this->authenticateCustomerSessionIfNeeded($order);
+
         // Status '0' means success
         if ($txnStatus === '0') {
             if ($order->getState() === Order::STATE_PROCESSING) {
@@ -356,6 +359,24 @@ class Response extends Action implements CsrfAwareActionInterface
     }
 
     /**
+     * Restore a logged-in storefront session when the customer completed checkout as guest in the
+     * browser but the order belongs to a registered account.
+     *
+     * Uses only the order's existing customer id; the payment gateway does not pass credentials
+     * in this redirect request (validation relies on Paydibs response signature checks above).
+     *
+     * @param Order $order
+     * @return void
+     */
+    protected function authenticateCustomerSessionIfNeeded(Order $order)
+    {
+        if (!$order->getCustomerId() || $this->customerSession->isLoggedIn()) {
+            return;
+        }
+        $this->customerSession->loginById((int) $order->getCustomerId());
+    }
+
+    /**
      * Verify signature from Paydibs response
      *
      * @param array $params
@@ -380,29 +401,17 @@ class Response extends Action implements CsrfAwareActionInterface
                           $params['PTxnStatus'] . 
                           $authCode;
         
-        $signatureStringWithoutPassword = 
-                          $params['MerchantID'] . 
-                          $params['MerchantPymtID'] . 
-                          $params['PTxnID'] . 
-                          $merchantOrdID . 
-                          $params['MerchantTxnAmt'] . 
-                          $params['MerchantCurrCode'] . 
-                          $params['PTxnStatus'] . 
-                          $authCode;
-                          
-        $this->paymentMethod->log('Response: Signature string (without password): ' . $signatureStringWithoutPassword);
         $calculatedSignature = hash('sha512', $signatureString);
         $result = hash_equals($calculatedSignature, $params['Sign']);
-        
-        if (!$result) {
-            $this->paymentMethod->log('Response: Signature verification failed.');
-            $this->paymentMethod->log('Response: Expected signature: ' . $calculatedSignature);
-            $this->paymentMethod->log('Response: Received signature: ' . $params['Sign']);
-            $this->paymentMethod->log('Response: Signature length - Expected: ' . strlen($calculatedSignature) . ', Received: ' . strlen($params['Sign']));
-        } else {
-            $this->paymentMethod->log('Response: Signature verification successful');
-        }
-        
+
+        $this->paymentMethod->log(
+            $result ? 'Response: Signature verification succeeded' : 'Response: Signature verification failed',
+            [
+                'merchant_pymt_id' => $params['MerchantPymtID'] ?? '',
+                'match' => $result,
+            ]
+        );
+
         return $result;
     }
 }

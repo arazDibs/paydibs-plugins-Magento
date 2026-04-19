@@ -5,6 +5,7 @@
 namespace Paydibs\PaymentGateway\Controller\Payment;
 
 use Magento\Framework\App\Action\Action;
+use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\Action\Context;
 use Magento\Checkout\Model\Session;
 use Magento\Sales\Model\OrderFactory;
@@ -17,7 +18,7 @@ use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\RequestInterface;
 
-class Prepare extends Action implements CsrfAwareActionInterface
+class Prepare extends Action implements HttpGetActionInterface, CsrfAwareActionInterface
 {
     /**
      * @var Session
@@ -241,21 +242,10 @@ class Prepare extends Action implements CsrfAwareActionInterface
                           $merchantCallbackURL . 
                           $token;
         
-        $signatureStringWithoutPassword = 
-                          $params['TxnType'] . 
-                          $params['MerchantID'] . 
-                          $params['MerchantPymtID'] . 
-                          $params['MerchantOrdID'] . 
-                          $params['MerchantRURL'] . 
-                          $params['MerchantTxnAmt'] . 
-                          $params['MerchantCurrCode'] . 
-                          $params['CustIP'] . 
-                          $pageTimeout . 
-                          $merchantCallbackURL . 
-                          $token;
-                          
-        $this->paymentMethod->log('Prepare: Signature string (without password): ' . $signatureStringWithoutPassword);
-        
+        $this->paymentMethod->log('Prepare: building payment redirect signature', [
+            'merchant_pymt_id' => $params['MerchantPymtID'] ?? '',
+        ]);
+
         $signature = hash('sha512', $signatureString);
         
         return $signature;

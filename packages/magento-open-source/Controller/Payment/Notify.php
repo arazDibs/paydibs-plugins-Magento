@@ -5,6 +5,7 @@
 namespace Paydibs\PaymentGateway\Controller\Payment;
 
 use Magento\Framework\App\Action\Action;
+use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\Request\InvalidRequestException;
@@ -20,9 +21,10 @@ use Magento\Framework\DB\TransactionFactory as DbTransactionFactory;
 use Magento\Sales\Model\Order\Email\Sender\InvoiceSender;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Paydibs\PaymentGateway\Model\Service\QuoteManagement;
+use Paydibs\PaymentGateway\Model\Log\GatewayParamsSanitizer;
 use Psr\Log\LoggerInterface;
 
-class Notify extends Action implements CsrfAwareActionInterface
+class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionInterface
 {
     /**
      * @var Session
@@ -139,12 +141,21 @@ class Notify extends Action implements CsrfAwareActionInterface
         $result = $this->resultFactory->create(\Magento\Framework\Controller\ResultFactory::TYPE_RAW);
         $result->setHeader('Content-Type', 'text/plain');
         
-        $this->paymentMethod->log('Notify: Request received: ' . json_encode($this->getRequest()->getParams()));
-        
+        $this->paymentMethod->log('Notify: IPN received', [
+            'params' => GatewayParamsSanitizer::sanitizeGatewayParams(
+                array_merge($this->getRequest()->getParams() ?: [], [])
+            ),
+        ]);
+
         try {
             $params = $this->getRequest()->getPostValue();
-            $this->paymentMethod->log('Notify: Raw params: ' . json_encode($params));
-            
+            if (!is_array($params)) {
+                $params = [];
+            }
+            $this->paymentMethod->log('Notify: POST body (sanitized)', [
+                'params' => GatewayParamsSanitizer::sanitizeGatewayParams($params),
+            ]);
+
             if (empty($params['MerchantPymtID']) && empty($params['PTxnStatus'])) {
                 foreach ($params as $key => $value) {
                     if (strpos($key, '{') === 0) {
@@ -369,29 +380,17 @@ class Notify extends Action implements CsrfAwareActionInterface
                           $params['PTxnStatus'] . 
                           $authCode;
         
-        $signatureStringWithoutPassword = 
-                          $params['MerchantID'] . 
-                          $params['MerchantPymtID'] . 
-                          $params['PTxnID'] . 
-                          $merchantOrdID . 
-                          $txnAmount . 
-                          $params['MerchantCurrCode'] . 
-                          $params['PTxnStatus'] . 
-                          $authCode;
-                          
-        $this->paymentMethod->log('Notify: Signature string (without password): ' . $signatureStringWithoutPassword);
         $calculatedSignature = hash('sha512', $signatureString);
         $result = hash_equals($calculatedSignature, $params['Sign']);
-        
-        if (!$result) {
-            $this->paymentMethod->log('Notify: Signature verification failed.');
-            $this->paymentMethod->log('Notify: Expected signature: ' . $calculatedSignature);
-            $this->paymentMethod->log('Notify: Received signature: ' . $params['Sign']);
-            $this->paymentMethod->log('Notify: Signature length - Expected: ' . strlen($calculatedSignature) . ', Received: ' . strlen($params['Sign']));
-        } else {
-            $this->paymentMethod->log('Notify: Signature verification successful');
-        }
-        
+
+        $this->paymentMethod->log(
+            $result ? 'Notify: Signature verification succeeded' : 'Notify: Signature verification failed',
+            [
+                'merchant_pymt_id' => $params['MerchantPymtID'] ?? '',
+                'match' => $result,
+            ]
+        );
+
         return $result;
     }
 }
