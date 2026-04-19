@@ -3,11 +3,10 @@
     "description": "Paydibs payment gateway for Magento Open Source (Magento 2.4.x).",
     "type": "magento2-module",
     "license": "proprietary",
-    "version": "1.0.1",
     "authors": [
         {
-            "name": "bridzia",
-            "email": "yoonlok.wee@bridzia.com.my"
+            "name": "Paydibs",
+            "email": "support@paydibs.com"
         }
     ],
     "require": {

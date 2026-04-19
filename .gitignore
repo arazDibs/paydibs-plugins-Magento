@@ -4,8 +4,9 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Archives (source lives in packages/)
+# Archives (source lives in packages/; rebuild with scripts/build-submission-packages.sh)
 *.zip
+dist/SHA256SUMS.txt
 
 # Composer (if used at repo root later)
 /vendor/

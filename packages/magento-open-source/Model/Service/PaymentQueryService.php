@@ -200,7 +200,7 @@ class PaymentQueryService
             return $responseParams;
         } catch (\Exception $e) {
             $this->paymentMethod->log('Query: Error querying payment status: ' . $e->getMessage());
-            return ['error' => $e->getMessage()];
+            return ['error' => true];
         }
     }
 
@@ -213,8 +213,8 @@ class PaymentQueryService
      */
     public function processQueryResponse(OrderInterface $order, array $response)
     {
-        if (isset($response['error'])) {
-            $this->paymentMethod->log('Query: Error in response for order #' . $order->getIncrementId() . ': ' . $response['error']);
+        if (isset($response['error']) && $response['error']) {
+            $this->paymentMethod->log('Query: Error in response for order #' . $order->getIncrementId());
             return false;
         }
         

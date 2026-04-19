@@ -1,0 +1,15 @@
+Adobe Commerce Marketplace — submission ZIPs
+==============================================
+
+From the repository root, run:
+
+  ./scripts/build-submission-packages.sh
+
+This creates (gitignored *.zip):
+
+  dist/paydibs-module-paymentgateway-open-source.zip   → paydibs/module-paymentgateway (Magento Open Source)
+  dist/paydibs-module-paymentgateway-commerce.zip      → paydibs/module-paymentgateway-commerce (Adobe Commerce)
+  dist/SHA256SUMS.txt                                  → checksums for the two ZIPs
+
+Upload the ZIP that matches your listing. The archive root contains composer.json, registration.php,
+and the module tree expected by Composer path installs and Marketplace validation.

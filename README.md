@@ -27,3 +27,9 @@ And fix **`packages/magento-commerce-cloud/README.md`** so `composer require` us
 ## Documentation for Marketplace
 
 See **`docs/INSTALLATION.md`** and **`docs/USER_GUIDE.md`**. Export them to PDF if Adobe Commerce Marketplace requires PDF uploads (≤ 5 MB).
+
+## Adobe Commerce Marketplace (technical readiness)
+
+The extension is structured to align with [Adobe Commerce PHP technical guidelines](https://developer.adobe.com/commerce/php/coding-standards/technical-guidelines), including dependency injection (no `ObjectManager` in module code), encrypted sensitive configuration, admin configuration gated by the core **`Magento_Payment::payment`** ACL (see `etc/adminhtml/system.xml`), PSR-3 logging, and hardened handling of external/gateway data (escaped where shown to customers; internal errors logged, not leaked in IPN responses).
+
+Before you submit the package in the Marketplace portal, complete Adobe’s current checklist: **coding standard / static tests**, **MFTF or manual test evidence** as required, **User Guide** (PDF if requested), **privacy / data handling** disclosures for payment data, and **Composer** metadata from the published listing. Package **`composer.json`** omits a `version` field so release versioning is driven by the Marketplace / Composer distribution workflow.

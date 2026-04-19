@@ -1,0 +1,5 @@
+Copyright © Paydibs. All rights reserved.
+
+This software is proprietary. Use, copying, modification, and distribution
+are permitted only under a separate license agreement between you and the
+copyright holder.

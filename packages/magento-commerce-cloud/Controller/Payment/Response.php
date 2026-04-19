@@ -25,6 +25,7 @@ use Magento\Sales\Model\Order\Email\Sender\InvoiceSender;
 use Paydibs\PaymentGateway\Model\Service\QuoteManagement;
 use Paydibs\PaymentGateway\Model\Log\GatewayParamsSanitizer;
 use Psr\Log\LoggerInterface;
+use Magento\Framework\Escaper;
 
 class Response extends Action implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -84,6 +85,11 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
     private $orderRepository;
 
     /**
+     * @var Escaper
+     */
+    private $escaper;
+
+    /**
      * @param Context $context
      * @param Session $checkoutSession
      * @param OrderFactory $orderFactory
@@ -96,6 +102,7 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
      * @param InvoiceSender $invoiceSender
      * @param QuoteManagement $quoteManagement
      * @param OrderRepositoryInterface $orderRepository
+     * @param Escaper $escaper
      */
     public function __construct(
         Context $context,
@@ -109,7 +116,8 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
         DbTransactionFactory $dbTransactionFactory,
         InvoiceSender $invoiceSender,
         QuoteManagement $quoteManagement,
-        OrderRepositoryInterface $orderRepository
+        OrderRepositoryInterface $orderRepository,
+        Escaper $escaper
     ) {
         parent::__construct($context);
         $this->checkoutSession = $checkoutSession;
@@ -123,6 +131,7 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
         $this->invoiceSender = $invoiceSender;
         $this->quoteManagement = $quoteManagement;
         $this->orderRepository = $orderRepository;
+        $this->escaper = $escaper;
     }
 
     /**
@@ -191,7 +200,9 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
                 $this->messageManager->addSuccessMessage(__('Your payment was successful.'));
                 return $this->resultRedirectFactory->create()->setPath('checkout/onepage/success');
             } else if ($order->getState() === Order::STATE_CANCELED) {
-                $this->messageManager->addErrorMessage(__('Payment failed: %1', isset($params['PTxnMsg']) ? $params['PTxnMsg'] : 'Payment failed'));
+                $this->messageManager->addErrorMessage(
+                    __('Payment failed: %1', $this->getEscapedGatewayMessage($params))
+                );
                 return $this->resultRedirectFactory->create()->setPath('checkout/cart');
             }
         }
@@ -300,7 +311,7 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
             return $this->resultRedirectFactory->create()->setPath('checkout/onepage/success');
         } else {
             // Payment failed or other status
-            $errorMessage = isset($params['PTxnMsg']) ? $params['PTxnMsg'] : 'Payment failed';
+            $errorMessage = $this->getEscapedGatewayMessage($params);
             $txnStatus = $params['PTxnStatus'];
             switch ($txnStatus) {
                 case '0': // Payment successful - already handled above
@@ -345,7 +356,7 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
                             );
                         
                         $this->orderRepository->save($order);
-                        $this->paymentMethod->log('Response: Payment failed for order ' . $params['MerchantPymtID'] . '. Status: ' . $txnStatus . ', Error: ' . $errorMessage);
+                        $this->paymentMethod->log('Response: Payment failed for order ' . $params['MerchantPymtID'] . '. Status: ' . $txnStatus . ', Error: ' . (isset($params['PTxnMsg']) ? (string) $params['PTxnMsg'] : ''));
                         
                         if ($this->paymentMethod->isCartRestorationEnabled()) {
                             $this->quoteManagement->restoreQuoteForCheckout($order->getQuoteId());
@@ -377,6 +388,20 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
             return;
         }
         $this->customerSession->loginById((int) $order->getCustomerId());
+    }
+
+    /**
+     * Escape gateway-supplied text for storefront messages and order history (XSS hardening).
+     *
+     * @param array $params
+     * @return string
+     */
+    private function getEscapedGatewayMessage(array $params): string
+    {
+        $raw = isset($params['PTxnMsg']) ? (string) $params['PTxnMsg'] : '';
+        return $raw !== ''
+            ? $this->escaper->escapeHtml($raw)
+            : (string) __('Payment failed');
     }
 
     /**

@@ -190,8 +190,8 @@ class Prepare extends Action implements HttpGetActionInterface, CsrfAwareActionI
         } catch (\Exception $e) {
             $this->paymentMethod->log('Prepare: Error occurred: ' . $e->getMessage());
             return $this->jsonFactory->create()->setData([
-                'error' => true, 
-                'message' => $e->getMessage()
+                'error' => true,
+                'message' => (string) __('An error occurred while processing your payment. Please try again.'),
             ]);
         }
     }

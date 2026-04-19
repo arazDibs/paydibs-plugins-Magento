@@ -23,6 +23,7 @@ use Magento\Sales\Api\OrderRepositoryInterface;
 use Paydibs\PaymentGateway\Model\Service\QuoteManagement;
 use Paydibs\PaymentGateway\Model\Log\GatewayParamsSanitizer;
 use Psr\Log\LoggerInterface;
+use Magento\Framework\Escaper;
 
 class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -77,6 +78,11 @@ class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionI
     private $orderRepository;
 
     /**
+     * @var Escaper
+     */
+    private $escaper;
+
+    /**
      * @param Context $context
      * @param Session $checkoutSession
      * @param OrderFactory $orderFactory
@@ -88,6 +94,7 @@ class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionI
      * @param InvoiceSender $invoiceSender
      * @param QuoteManagement $quoteManagement
      * @param OrderRepositoryInterface $orderRepository
+     * @param Escaper $escaper
      */
     public function __construct(
         Context $context,
@@ -100,7 +107,8 @@ class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionI
         DbTransactionFactory $dbTransactionFactory,
         InvoiceSender $invoiceSender,
         QuoteManagement $quoteManagement,
-        OrderRepositoryInterface $orderRepository
+        OrderRepositoryInterface $orderRepository,
+        Escaper $escaper
     ) {
         parent::__construct($context);
         $this->checkoutSession = $checkoutSession;
@@ -113,6 +121,7 @@ class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionI
         $this->invoiceSender = $invoiceSender;
         $this->quoteManagement = $quoteManagement;
         $this->orderRepository = $orderRepository;
+        $this->escaper = $escaper;
     }
 
     /**
@@ -283,7 +292,10 @@ class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionI
                 return $result;
             } else {
                 // Payment failed or other status
-                $errorMessage = isset($params['PTxnMsg']) ? $params['PTxnMsg'] : 'Payment failed';
+                $rawPtMsg = isset($params['PTxnMsg']) ? (string) $params['PTxnMsg'] : '';
+                $errorMessage = $rawPtMsg !== ''
+                    ? $this->escaper->escapeHtml($rawPtMsg)
+                    : (string) __('Payment failed');
                 $txnStatus = $params['PTxnStatus'];
                 switch ($txnStatus) {
                     case '0': // Payment successful - already handled above
@@ -329,7 +341,7 @@ class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionI
                             $payment = $order->getPayment();
                             $payment->setAdditionalInformation('processed_ptxn_id', $params['PTxnID']);
                             $this->orderRepository->save($order);
-                            $this->paymentMethod->log('Notify: Payment failed for order ' . $params['MerchantPymtID'] . '. Status: ' . $txnStatus . ', Error: ' . $errorMessage);
+                            $this->paymentMethod->log('Notify: Payment failed for order ' . $params['MerchantPymtID'] . '. Status: ' . $txnStatus . ', Error: ' . $rawPtMsg);
                             
                             if ($this->paymentMethod->isCartRestorationEnabled()) {
                                 $this->quoteManagement->restoreQuoteForCheckout($order->getQuoteId());
@@ -347,7 +359,7 @@ class Notify extends Action implements HttpPostActionInterface, CsrfAwareActionI
             }
         } catch (\Exception $e) {
             $this->paymentMethod->log('Notify: Notification error: ' . $e->getMessage());
-            $result->setContents('ERROR: ' . $e->getMessage());
+            $result->setContents('ERROR');
             return $result;
         }
     }

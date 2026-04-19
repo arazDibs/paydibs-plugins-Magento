@@ -89,7 +89,7 @@ class Requery implements HttpGetActionInterface
             $this->paymentMethod->log('Requery: Error: ' . $e->getMessage());
             $response = [
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => (string) __('Something went wrong while running the requery job.'),
             ];
         }
 
