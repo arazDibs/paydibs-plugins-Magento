@@ -18,4 +18,7 @@ composer.json includes "version": "103.0.0" — use Marketplace Version Number v
 
 Form copy-paste help: docs/marketplace/TECHNICAL_SUBMISSION.md
 Release notes text: docs/marketplace/RELEASE_NOTES_FOR_PORTAL.txt
-PDF (print from browser): docs/marketplace/Paydibs-PaymentGateway-Installation-and-User-Guide.html
+PDF (print from browser):
+  docs/marketplace/Paydibs-Guide-Magento-Open-Source.html
+  docs/marketplace/Paydibs-Guide-Adobe-Commerce.html
+Markdown + screenshots: docs/guides/ and docs/images/user-guide/

@@ -24,11 +24,14 @@ Then restore the Commerce **`composer.json`** identity:
 
 And fix **`packages/magento-commerce-cloud/README.md`** so `composer require` uses `paydibs/module-paymentgateway-commerce`.
 
-## Documentation for Marketplace
+## Documentation
 
-- **`docs/INSTALLATION.md`** — requirements, Composer and ZIP install, verification, admin ACL, license.
-- **`docs/USER_GUIDE.md`** — configuration fields, checkout flow, cron (every 15 minutes), security, license.
-- **`docs/marketplace/Paydibs-PaymentGateway-Installation-and-User-Guide.html`** — print to PDF (**≤ 5 MB**) for the Marketplace **User Guide / Installation Guide** upload.
+- **`docs/guides/Paydibs-Magento-Open-Source-User-Guide.md`** — Magento Open Source (human-written, screenshots).
+- **`docs/guides/Paydibs-Adobe-Commerce-User-Guide.md`** — Adobe Commerce / Cloud (same visuals, Commerce Composer name and deployment notes).
+- **`docs/images/user-guide/`** — PNG screenshots (from Paydibs Magento User Guide PDF).
+- **Marketplace PDF:** print **`docs/marketplace/Paydibs-Guide-Magento-Open-Source.html`** or **`Paydibs-Guide-Adobe-Commerce.html`** → Save as PDF (**≤ 5 MB**), matching your listing.
+
+See **`docs/INSTALLATION.md`** for quick links and command snippets.
 
 ## Adobe Commerce Marketplace (technical readiness)
 

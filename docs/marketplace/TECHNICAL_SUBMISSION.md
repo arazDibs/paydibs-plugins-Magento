@@ -34,9 +34,14 @@ This extension is a **payment gateway**; it does **not** add Page Builder conten
 
 ## Documentation (mandatory PDF, ≤ 5 MB)
 
-1. Open **`docs/marketplace/Paydibs-PaymentGateway-Installation-and-User-Guide.html`** in Chrome or Edge (content matches **`docs/INSTALLATION.md`** and **`docs/USER_GUIDE.md`**).
-2. **Print → Save as PDF** (or **Export as PDF**). Keep file size under **5 MB**.
-3. Upload that PDF as **User Guide / Installation Guide**. Technical review checks that install steps, configuration paths, and behavior match the uploaded **extension code package**.
+Upload **one** PDF that matches your listing edition:
+
+| Listing | Open in browser → Print → Save as PDF |
+|---------|----------------------------------------|
+| **Magento Open Source** | **`docs/marketplace/Paydibs-Guide-Magento-Open-Source.html`** |
+| **Adobe Commerce** | **`docs/marketplace/Paydibs-Guide-Adobe-Commerce.html`** |
+
+Content is mirrored in Markdown under **`docs/guides/`** with the same screenshots (**`docs/images/user-guide/`**). Technical review expects installation steps, configuration path, and behavior to match the **uploaded extension package**.
 
 ## Shared packages (optional)
 

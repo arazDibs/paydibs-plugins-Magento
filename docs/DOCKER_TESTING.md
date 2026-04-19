@@ -2,7 +2,7 @@
 
 This uses the common **markshust/docker-magento** stack (Magento **Open Source**, good enough to exercise your module; behavior matches Adobe Commerce core payment/checkout for this extension).
 
-Official install and user documentation for reviewers and merchants is in **`docs/INSTALLATION.md`** and **`docs/USER_GUIDE.md`** (Apache-2.0; same content as the Marketplace printable HTML under **`docs/marketplace/`**).
+Full guides with screenshots: **`docs/guides/Paydibs-Magento-Open-Source-User-Guide.md`** (and Adobe Commerce variant). Quick index: **`docs/INSTALLATION.md`**. License: Apache-2.0.
 
 ### Recommended Magento version
 

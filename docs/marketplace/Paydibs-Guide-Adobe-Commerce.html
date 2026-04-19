@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paydibs Payment Gateway — Adobe Commerce (user guide)</title>
+  <style>
+    @page { margin: 1.8cm; }
+    body { font-family: Georgia, "Times New Roman", serif; line-height: 1.5; color: #1a1a1a; max-width: 44rem; margin: 0 auto; padding: 1rem 1.25rem 2.5rem; font-size: 11pt; }
+    h1 { font-family: system-ui, sans-serif; font-size: 1.35rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .subtitle { font-size: 0.95rem; color: #444; margin: 0 0 1.25rem; font-style: italic; }
+    h2 { font-family: system-ui, sans-serif; font-size: 1.05rem; margin-top: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.2rem; }
+    p { margin: 0.65rem 0; }
+    ul { margin: 0.5rem 0; padding-left: 1.2rem; }
+    pre { background: #f5f5f5; border: 1px solid #e0e0e0; padding: 0.65rem 0.85rem; overflow-x: auto; font-size: 0.85rem; }
+    code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; }
+    figure { margin: 1rem 0; }
+    figure img { max-width: 100%; height: auto; border: 1px solid #ddd; }
+    figcaption { font-size: 0.85rem; color: #555; margin-top: 0.35rem; }
+    hr { border: none; border-top: 1px solid #eee; margin: 1.25rem 0; }
+    @media print { figure { break-inside: avoid; } h2 { break-after: avoid; } }
+  </style>
+</head>
+<body>
+  <h1>Paydibs Payment Gateway — Adobe Commerce</h1>
+  <p class="subtitle">On-prem &amp; Commerce Cloud · Composer: <code>paydibs/module-paymentgateway-commerce</code> · Adobe Commerce 2.4.x</p>
+
+  <figure>
+    <img src="../images/user-guide/paydibs-header-banner.png" alt="Paydibs" />
+  </figure>
+
+  <h2>Who this is for</h2>
+  <p>This guide is for teams running <strong>Adobe Commerce</strong> (on-premises or <strong>Commerce Cloud</strong>). Checkout and admin behavior match standard Magento patterns—Paydibs is a payment method with hosted pages and server notifications behind the scenes.</p>
+
+  <h2>Requirements</h2>
+  <ul>
+    <li><strong>Adobe Commerce 2.4.x</strong> compatible with the package <code>composer.json</code>.</li>
+    <li><strong>PHP</strong> per your Adobe Commerce release.</li>
+    <li><strong>Paydibs</strong> Test credentials for QA; Production when you launch.</li>
+  </ul>
+
+  <h2>Installing with Composer</h2>
+  <p>From the Magento project root:</p>
+  <pre><code>composer require paydibs/module-paymentgateway-commerce
+bin/magento module:enable Paydibs_PaymentGateway
+bin/magento setup:upgrade
+bin/magento setup:di:compile
+bin/magento cache:flush</code></pre>
+  <p>On <strong>Commerce Cloud</strong>, add the dependency the way you manage other extensions: commit <code>composer.json</code> / <code>composer.lock</code> and deploy through your pipeline so <code>vendor/</code> is built on each environment.</p>
+  <p>Verify: <code>bin/magento module:status Paydibs_PaymentGateway</code> should show <strong>enabled</strong>.</p>
+
+  <h2>Configuration</h2>
+  <p>Use <strong>Stores → Configuration → Sales → Payment Methods → Paydibs Payment Gateway</strong>. Set scopes (website / store view) the same way you do for other payment methods—e.g. Test on staging, Production on live.</p>
+  <figure>
+    <img src="../images/user-guide/admin-paydibs-settings.png" alt="Paydibs configuration in Adobe Commerce Admin" />
+    <figcaption>Paydibs payment settings (example values).</figcaption>
+  </figure>
+
+  <h2>Storefront flow</h2>
+  <figure>
+    <img src="../images/user-guide/storefront-checkout-payment-methods.png" alt="Checkout with Paydibs" />
+    <figcaption>Paydibs on the payment step.</figcaption>
+  </figure>
+  <figure>
+    <img src="../images/user-guide/hosted-paydibs-payment-page.png" alt="Hosted Paydibs page" />
+    <figcaption>Customer completes payment on Paydibs.</figcaption>
+  </figure>
+  <figure>
+    <img src="../images/user-guide/paydibs-test-simulator.png" alt="Test simulator" />
+    <figcaption>Test-environment simulator (when available).</figcaption>
+  </figure>
+  <figure>
+    <img src="../images/user-guide/hosted-payment-success.png" alt="Payment success" />
+    <figcaption>Success confirmation before return to your store.</figcaption>
+  </figure>
+
+  <h2>Operations and order view</h2>
+  <figure>
+    <img src="../images/user-guide/admin-order-paydibs-details.png" alt="Order details with Paydibs transaction data" />
+    <figcaption>Paydibs reference data on the order.</figcaption>
+  </figure>
+  <p>Ensure <strong>cron</strong> runs in each environment where you take payments; pending orders are rechecked about every <strong>15 minutes</strong>. IPN endpoints must be reachable from Paydibs according to your Adobe Commerce / Cloud networking setup.</p>
+
+  <h2>License</h2>
+  <p>Apache License, Version 2.0 — see <code>LICENSE.txt</code> and <code>NOTICE.txt</code> in the package.</p>
+
+  <hr />
+  <p style="font-size:0.9rem;color:#666;">Screenshots sourced from Paydibs Magento user reference material.</p>
+</body>
+</html>

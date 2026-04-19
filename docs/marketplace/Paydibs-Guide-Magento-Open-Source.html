@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paydibs Payment Gateway — Magento Open Source (user guide)</title>
+  <style>
+    @page { margin: 1.8cm; }
+    body { font-family: Georgia, "Times New Roman", serif; line-height: 1.5; color: #1a1a1a; max-width: 44rem; margin: 0 auto; padding: 1rem 1.25rem 2.5rem; font-size: 11pt; }
+    h1 { font-family: system-ui, sans-serif; font-size: 1.35rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .subtitle { font-size: 0.95rem; color: #444; margin: 0 0 1.25rem; font-style: italic; }
+    h2 { font-family: system-ui, sans-serif; font-size: 1.05rem; margin-top: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.2rem; }
+    p { margin: 0.65rem 0; }
+    ul { margin: 0.5rem 0; padding-left: 1.2rem; }
+    pre { background: #f5f5f5; border: 1px solid #e0e0e0; padding: 0.65rem 0.85rem; overflow-x: auto; font-size: 0.85rem; }
+    code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; }
+    figure { margin: 1rem 0; }
+    figure img { max-width: 100%; height: auto; border: 1px solid #ddd; }
+    figcaption { font-size: 0.85rem; color: #555; margin-top: 0.35rem; }
+    hr { border: none; border-top: 1px solid #eee; margin: 1.25rem 0; }
+    @media print { figure { break-inside: avoid; } h2 { break-after: avoid; } }
+  </style>
+</head>
+<body>
+  <h1>Paydibs Payment Gateway — Magento Open Source</h1>
+  <p class="subtitle">For merchants and developers · Composer: <code>paydibs/module-paymentgateway</code> · Magento Open Source 2.4.x</p>
+
+  <figure>
+    <img src="../images/user-guide/paydibs-header-banner.png" alt="Paydibs" width="1648" height="171" />
+  </figure>
+
+  <h2>What this extension does</h2>
+  <p>If you run a Magento Open Source store and want customers to pay through Paydibs, this module connects your checkout to Paydibs’ hosted payment flow. The shopper places an order, pays on Paydibs, then returns while Magento updates the order from Paydibs’ responses (return URL, server notification, and optional background checks). You keep your normal order and invoice workflow—only the payment rail changes.</p>
+
+  <h2>Before you install</h2>
+  <ul>
+    <li><strong>Magento Open Source 2.4.x</strong> — see the package <code>composer.json</code> for framework constraints.</li>
+    <li><strong>PHP</strong> — match your Magento version; the package lists supported ranges.</li>
+    <li><strong>Paydibs</strong> — use <strong>Test</strong> credentials first, then <strong>Production</strong> when you go live.</li>
+  </ul>
+
+  <h2>Installing with Composer</h2>
+  <p>From your Magento project root:</p>
+  <pre><code>composer require paydibs/module-paymentgateway
+bin/magento module:enable Paydibs_PaymentGateway
+bin/magento setup:upgrade
+bin/magento setup:di:compile
+bin/magento cache:flush</code></pre>
+  <p>If you use a ZIP or path repository, point Composer at the folder that contains this package’s <code>composer.json</code>, require the package, then run the same <code>bin/magento</code> commands. Confirm with <code>bin/magento module:status Paydibs_PaymentGateway</code> — it should show <strong>enabled</strong>.</p>
+
+  <h2>Configuration in Admin</h2>
+  <p>Open <strong>Stores → Configuration → Sales → Payment Methods → Paydibs Payment Gateway</strong>. Enter your Merchant ID and Merchant Password from Paydibs, choose Test or Production, and enable the method when ready.</p>
+  <figure>
+    <img src="../images/user-guide/admin-paydibs-settings.png" alt="Paydibs configuration in Magento Admin" />
+    <figcaption>Typical Paydibs settings screen (values shown are examples).</figcaption>
+  </figure>
+
+  <h2>Checkout and hosted payment</h2>
+  <p>On the payment step, customers can choose Paydibs like any other method.</p>
+  <figure>
+    <img src="../images/user-guide/storefront-checkout-payment-methods.png" alt="Checkout payment methods including Paydibs" />
+    <figcaption>Paydibs listed on Review &amp; Payments.</figcaption>
+  </figure>
+  <p>After place order, the browser continues on Paydibs to complete payment.</p>
+  <figure>
+    <img src="../images/user-guide/hosted-paydibs-payment-page.png" alt="Paydibs hosted payment page" />
+    <figcaption>Hosted Paydibs page (test/sandbox styling may differ).</figcaption>
+  </figure>
+  <p>In test environments you may use Paydibs’ simulator to pick success or failure.</p>
+  <figure>
+    <img src="../images/user-guide/paydibs-test-simulator.png" alt="Paydibs bank host simulator" />
+    <figcaption>Simulator for test transactions.</figcaption>
+  </figure>
+  <p>After a successful payment, the customer sees confirmation before returning to your store.</p>
+  <figure>
+    <img src="../images/user-guide/hosted-payment-success.png" alt="Payment successful on Paydibs" />
+    <figcaption>Success confirmation on Paydibs.</figcaption>
+  </figure>
+
+  <h2>Orders in Admin</h2>
+  <p>Transaction details appear on the order for support and reconciliation.</p>
+  <figure>
+    <img src="../images/user-guide/admin-order-paydibs-details.png" alt="Order view showing Paydibs transaction details" />
+    <figcaption>Paydibs details on the order.</figcaption>
+  </figure>
+
+  <h2>Background processing</h2>
+  <p>A <strong>cron</strong> job runs about every 15 minutes to recheck pending Paydibs orders—ensure Magento cron is running in production. An optional <strong>manual requery</strong> URL exists if you configure a secret; leave it empty if you do not need it.</p>
+
+  <h2>License</h2>
+  <p>Apache License, Version 2.0 — see <code>LICENSE.txt</code> and <code>NOTICE.txt</code> in the package.</p>
+
+  <hr />
+  <p style="font-size:0.9rem;color:#666;">Screenshots sourced from Paydibs Magento user reference material. UI may vary slightly by Magento theme and Paydibs environment.</p>
+</body>
+</html>
