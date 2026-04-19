@@ -3,7 +3,7 @@
     "description": "Paydibs payment gateway for Adobe Commerce and Magento Commerce Cloud (Magento 2.4.x).",
     "type": "magento2-module",
     "version": "103.0.0",
-    "license": "proprietary",
+    "license": "Apache-2.0",
     "authors": [
         {
             "name": "Paydibs",

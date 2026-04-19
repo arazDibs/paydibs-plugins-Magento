@@ -26,9 +26,10 @@ This extension is a **payment gateway**; it does **not** add Page Builder conten
 
 ## Licensing
 
-- **License type:** **Proprietary** (or the closest Marketplace option).
-- **`composer.json`:** `"license": "proprietary"`.
-- **Custom license URL (if required):** Use your public terms URL, or the raw `LICENSE.txt` URL on GitHub, e.g.  
+- **License type:** **Apache License 2.0** (OSI-approved open source).
+- **`composer.json`:** `"license": "Apache-2.0"`.
+- **Full text:** `packages/magento-open-source/LICENSE.txt` · **Attribution / trademark note:** `NOTICE.txt`.
+- **Custom license URL (if required):** Raw `LICENSE.txt` on GitHub, e.g.  
   `https://github.com/arazDibs/paydibs-plugins-Magento/blob/main/packages/magento-open-source/LICENSE.txt`
 
 ## Documentation (mandatory PDF, ≤ 5 MB)

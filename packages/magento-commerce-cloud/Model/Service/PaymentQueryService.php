@@ -2,6 +2,9 @@
 /**
  * Paydibs Payment Gateway
  *
+ * Copyright 2026 Paydibs
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * @category    Paydibs
  * @package     Paydibs_PaymentGateway
  */

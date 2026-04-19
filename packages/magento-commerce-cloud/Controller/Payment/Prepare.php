@@ -1,6 +1,7 @@
 <?php
 /**
- * Copyright © Paydibs. All rights reserved.
+ * Copyright 2026 Paydibs
+ * SPDX-License-Identifier: Apache-2.0
  */
 namespace Paydibs\PaymentGateway\Controller\Payment;
 
