@@ -15,7 +15,7 @@
     table { border-collapse: collapse; width: 100%; font-size: 0.92rem; margin: 0.75rem 0; }
     th, td { border: 1px solid #ccc; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
     th { background: #f0f0f0; }
-    ul { padding-left: 1.25rem; }
+    ul, ol { padding-left: 1.25rem; }
     .meta { color: #555; font-size: 0.9rem; margin-bottom: 2rem; }
     @media print {
       body { padding: 0; }
@@ -24,13 +24,18 @@
   </style>
 </head>
 <body>
-  <p class="meta">Paydibs Payment Gateway · Extension version 103.0.0 · Adobe Commerce &amp; Magento Open Source 2.4.x</p>
+  <p class="meta">Paydibs Payment Gateway · Package version 103.0.0 (composer.json) · Adobe Commerce &amp; Magento Open Source 2.4.x · License: Apache-2.0</p>
+
+  <h1>License</h1>
+  <p>This extension is distributed under the <strong>Apache License, Version 2.0</strong>. The full legal text ships in <code>LICENSE.txt</code>; <code>NOTICE.txt</code> contains copyright and trademark notices. The SPDX identifier in <code>composer.json</code> is <code>Apache-2.0</code>. Summary: <a href="https://www.apache.org/licenses/LICENSE-2.0">https://www.apache.org/licenses/LICENSE-2.0</a></p>
+
   <h1>Installation</h1>
 
   <h2>Requirements</h2>
   <ul>
-    <li>Adobe Commerce or Magento Open Source <strong>2.4.x</strong> (see the extension <code>composer.json</code> for <code>magento/framework</code> and module constraints).</li>
-    <li>PHP version supported by your Magento installation (see <code>require.php</code> in the extension <code>composer.json</code>).</li>
+    <li><strong>Adobe Commerce</strong> or <strong>Magento Open Source 2.4.x</strong> — requires <code>magento/framework</code> ~103.0.0||~104.0.0 (see <code>composer.json</code>).</li>
+    <li><strong>PHP</strong> — must match your Magento version and satisfy <code>require.php</code> in the extension <code>composer.json</code>.</li>
+    <li><strong>Marketplace</strong> — listing version must match <code>version</code> in <code>composer.json</code> inside the uploaded ZIP.</li>
   </ul>
 
   <h2>Install via Composer (recommended)</h2>
@@ -41,28 +46,37 @@ bin/magento setup:upgrade
 bin/magento setup:di:compile
 bin/magento cache:flush</code></pre>
 
-  <p><strong>Adobe Commerce / Commerce Cloud</strong> (Commerce package name)</p>
+  <p><strong>Adobe Commerce / Commerce Cloud</strong></p>
   <pre><code>composer require paydibs/module-paymentgateway-commerce
 bin/magento module:enable Paydibs_PaymentGateway
 bin/magento setup:upgrade
 bin/magento setup:di:compile
 bin/magento cache:flush</code></pre>
 
-  <p>If you install from a <strong>path repository</strong>, point Composer at the extracted package directory as appropriate.</p>
+  <p>For a <strong>path repository</strong>, point Composer at the folder that contains this package’s <code>composer.json</code>.</p>
 
-  <h2>Install from ZIP (Marketplace / manual)</h2>
+  <h2>Install from ZIP (Marketplace)</h2>
   <ol>
-    <li>Extract the Composer package so it matches a normal Composer install layout under <code>vendor/</code>, or follow your agency’s <code>app/code</code> workflow if applicable.</li>
-    <li>Run <code>bin/magento module:enable Paydibs_PaymentGateway</code>, then <code>setup:upgrade</code>, <code>setup:di:compile</code>, and <code>cache:flush</code> as above.</li>
+    <li>Unzip so the <strong>root</strong> of the folder contains <code>composer.json</code>, <code>registration.php</code>, <code>etc/</code>, and the rest of the module (no extra wrapping directory in path references).</li>
+    <li>Add that folder as a Composer <strong>path</strong> repository, then <code>composer require</code> the package; or install through Marketplace when available.</li>
+    <li>Run the same <code>bin/magento</code> commands as above.</li>
   </ol>
+  <p>Prefer installation through Composer into <code>vendor/</code>. Copying only to <code>app/code</code> is possible for testing but is not the primary documented flow.</p>
+
+  <h2>Verify installation</h2>
+  <pre><code>bin/magento module:status Paydibs_PaymentGateway</code></pre>
+  <p>Expected: <strong>Module is enabled</strong>.</p>
+
+  <h2>Admin access</h2>
+  <p>Configuration: <strong>Stores → Configuration → Sales → Payment Methods → Paydibs Payment Gateway</strong>. Administrators need access to payment settings (Magento <code>Magento_Payment::payment</code> ACL).</p>
 
   <h2>After installation</h2>
-  <p>Configure credentials under <strong>Stores → Configuration → Sales → Payment Methods → Paydibs Payment Gateway</strong>. Field descriptions are in the User Guide below.</p>
+  <p>Set <strong>Merchant ID</strong>, <strong>Merchant Password</strong>, and <strong>API Environment</strong> (Test vs Production) before taking live traffic.</p>
 
   <h1>User guide</h1>
 
   <h2>Overview</h2>
-  <p>The extension adds <strong>Paydibs</strong> as a payment method. Checkout places an order in <strong>pending payment</strong>, then sends the customer to <strong>Paydibs</strong> to pay. The store updates order status from <strong>return URLs</strong>, <strong>server notifications (IPN)</strong>, and optional <strong>cron</strong> / <strong>manual requery</strong> flows.</p>
+  <p>The extension adds <strong>Paydibs</strong> as a payment method. Checkout creates an order in <strong>pending payment</strong>, then redirects the customer to <strong>Paydibs</strong>. Orders are updated from <strong>return URLs</strong>, <strong>IPN</strong> notifications, optional <strong>cron</strong>, and optional <strong>manual requery</strong>.</p>
 
   <h2>Configuration (Admin)</h2>
   <p><strong>Stores → Configuration → Sales → Payment Methods → Paydibs Payment Gateway</strong></p>
@@ -72,38 +86,39 @@ bin/magento cache:flush</code></pre>
     </thead>
     <tbody>
       <tr><td>Enabled</td><td>Turn the method on or off.</td></tr>
-      <tr><td>Title</td><td>Label shoppers see at checkout.</td></tr>
-      <tr><td>API Environment</td><td><strong>Test</strong> vs <strong>Production</strong> (affects API endpoints).</td></tr>
-      <tr><td>Merchant ID</td><td>Issued by Paydibs.</td></tr>
-      <tr><td>Merchant Password</td><td>Issued by Paydibs; stored encrypted by Magento.</td></tr>
-      <tr><td>Page Timeout</td><td>Paydibs hosted page timeout (seconds).</td></tr>
-      <tr><td>Sort Order</td><td>Checkout payment list order.</td></tr>
-      <tr><td>Enabled Log</td><td>When <strong>Yes</strong>, diagnostic messages go to <code>var/log/paydibs.log</code> (signatures and secrets are not logged in full).</td></tr>
-      <tr><td>Restore Cart on Failed Payment</td><td>When <strong>Yes</strong>, failed or cancelled payments attempt to reactivate the quote for checkout.</td></tr>
-      <tr><td>Manual Requery Secret Key</td><td>If set, calling <code>paydibs/payment/requery?key=&lt;secret&gt;</code> runs the pending-order query job; leave empty to disable.</td></tr>
+      <tr><td>Title</td><td>Label at checkout.</td></tr>
+      <tr><td>API Environment</td><td><strong>Test</strong> or <strong>Production</strong>.</td></tr>
+      <tr><td>Merchant ID</td><td>From Paydibs.</td></tr>
+      <tr><td>Merchant Password</td><td>From Paydibs; stored encrypted.</td></tr>
+      <tr><td>Page Timeout</td><td>Hosted page timeout (seconds).</td></tr>
+      <tr><td>Sort Order</td><td>Checkout list order.</td></tr>
+      <tr><td>Enabled Log</td><td><strong>Yes</strong> writes to <code>var/log/paydibs.log</code> (no full signatures/secrets).</td></tr>
+      <tr><td>Restore Cart on Failed Payment</td><td><strong>Yes</strong> attempts quote restoration after failure where applicable.</td></tr>
+      <tr><td>Manual Requery Secret Key</td><td>Optional. If set, <strong>GET</strong> <code>paydibs/payment/requery?key=&lt;secret&gt;</code> runs the pending-order query (JSON). Empty = disabled.</td></tr>
     </tbody>
   </table>
 
   <h2>Checkout flow (customer)</h2>
   <ol>
-    <li>Customer chooses <strong>Paydibs</strong> and places the order.</li>
-    <li>The browser is sent to <strong>Paydibs</strong> using the prepared payment URL.</li>
-    <li>On success or failure, Paydibs redirects back to the store; the order is updated accordingly.</li>
+    <li>Customer selects Paydibs and places the order.</li>
+    <li>Browser redirects to Paydibs using the prepared URL.</li>
+    <li>Paydibs redirects back; order status updates from signed parameters.</li>
   </ol>
 
   <h2>Operational features</h2>
   <ul>
-    <li><strong>Cron</strong> (<code>paydibs_query_pending_orders</code>): Periodically queries pending-payment Paydibs orders (schedule in <code>etc/crontab.xml</code>).</li>
-    <li><strong>Manual requery</strong>: Optional secret-protected URL for support (see Manual Requery Secret Key).</li>
+    <li><strong>Cron</strong> — Job <code>paydibs_query_pending_orders</code>, schedule <code>*/15 * * * *</code> (about every <strong>15 minutes</strong>). Requires Magento cron to be active.</li>
+    <li><strong>Manual requery</strong> — Optional secret-protected GET for support or automation.</li>
   </ul>
 
-  <h2>Security notes</h2>
+  <h2>Security and privacy</h2>
   <ul>
-    <li><strong>Response</strong> and <strong>Notify</strong> validate Paydibs payloads using signed fields as implemented in the extension.</li>
-    <li>When logging is enabled, logs avoid full <strong>Sign</strong> values and avoid logging full query URLs that contain secrets.</li>
+    <li><strong>Response</strong> and <strong>Notify</strong> validate signatures per Paydibs integration rules.</li>
+    <li>Secrets use Magento encrypted config where applicable.</li>
+    <li>Hosted payment data is processed by Paydibs; align your privacy policy and agreements accordingly.</li>
   </ul>
 
   <h2>Support</h2>
-  <p>Use your Paydibs merchant support channel and the extension GitHub issue tracker listed in <code>composer.json</code> under <code>support.issues</code>, if applicable.</p>
+  <p>Paydibs merchant support for gateway accounts. Extension: URLs in <code>composer.json</code> (<code>support.source</code>, <code>support.issues</code>).</p>
 </body>
 </html>

@@ -34,9 +34,9 @@ This extension is a **payment gateway**; it does **not** add Page Builder conten
 
 ## Documentation (mandatory PDF, ≤ 5 MB)
 
-1. Open **`docs/marketplace/Paydibs-PaymentGateway-Installation-and-User-Guide.html`** in Chrome or Edge.
-2. **Print → Save as PDF** (or **Export as PDF**).
-3. Upload that PDF as **User Guide / Installation Guide**.
+1. Open **`docs/marketplace/Paydibs-PaymentGateway-Installation-and-User-Guide.html`** in Chrome or Edge (content matches **`docs/INSTALLATION.md`** and **`docs/USER_GUIDE.md`**).
+2. **Print → Save as PDF** (or **Export as PDF**). Keep file size under **5 MB**.
+3. Upload that PDF as **User Guide / Installation Guide**. Technical review checks that install steps, configuration paths, and behavior match the uploaded **extension code package**.
 
 ## Shared packages (optional)
 

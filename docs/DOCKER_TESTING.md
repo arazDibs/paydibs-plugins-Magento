@@ -2,6 +2,8 @@
 
 This uses the common **markshust/docker-magento** stack (Magento **Open Source**, good enough to exercise your module; behavior matches Adobe Commerce core payment/checkout for this extension).
 
+Official install and user documentation for reviewers and merchants is in **`docs/INSTALLATION.md`** and **`docs/USER_GUIDE.md`** (Apache-2.0; same content as the Marketplace printable HTML under **`docs/marketplace/`**).
+
 ### Recommended Magento version
 
 Use **Magento Open Source 2.4.7** as a solid default: it matches the ecosystem around **`magento/framework` `~103.0.0||~104.0.0`** declared in this extension’s `composer.json`, is widely used, and is a good Marketplace-aligned smoke-test target. You can also use **2.4.6** or **2.4.8+** if you prefer—stay consistent with what you claim in the listing.

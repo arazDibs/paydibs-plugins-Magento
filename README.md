@@ -26,7 +26,9 @@ And fix **`packages/magento-commerce-cloud/README.md`** so `composer require` us
 
 ## Documentation for Marketplace
 
-See **`docs/INSTALLATION.md`** and **`docs/USER_GUIDE.md`**. Export them to PDF if Adobe Commerce Marketplace requires PDF uploads (≤ 5 MB).
+- **`docs/INSTALLATION.md`** — requirements, Composer and ZIP install, verification, admin ACL, license.
+- **`docs/USER_GUIDE.md`** — configuration fields, checkout flow, cron (every 15 minutes), security, license.
+- **`docs/marketplace/Paydibs-PaymentGateway-Installation-and-User-Guide.html`** — print to PDF (**≤ 5 MB**) for the Marketplace **User Guide / Installation Guide** upload.
 
 ## Adobe Commerce Marketplace (technical readiness)
 
