@@ -151,13 +151,16 @@ class Response extends Action implements HttpGetActionInterface, HttpPostActionI
     public function execute()
     {
         $params = $this->getRequest()->getParams();
-
         if ($this->getRequest()->isPost()) {
-            $params = $this->getRequest()->getPostValue();
+            $post = $this->getRequest()->getPostValue();
+            $params = is_array($post) ? $post : [];
+        }
+        if (!is_array($params)) {
+            $params = [];
         }
 
         $this->paymentMethod->log('Response: gateway callback', [
-            'params' => GatewayParamsSanitizer::sanitizeGatewayParams(is_array($params) ? $params : []),
+            'params' => GatewayParamsSanitizer::sanitizeGatewayParams($params),
         ]);
         
         if (!isset($params['MerchantPymtID']) || !isset($params['PTxnStatus']) || !isset($params['PTxnID'])) {
