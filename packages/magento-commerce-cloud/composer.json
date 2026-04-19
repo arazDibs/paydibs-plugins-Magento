@@ -11,7 +11,11 @@
     ],
     "require": {
         "php": "~7.4.0||~8.1.0||~8.2.0||~8.3.0||~8.4.0",
-        "magento/framework": "~103.0.0||~104.0.0"
+        "magento/framework": "~103.0.0||~104.0.0",
+        "magento/module-payment": "*",
+        "magento/module-checkout": "*",
+        "magento/module-sales": "*",
+        "magento/module-quote": "*"
     },
     "autoload": {
         "files": [

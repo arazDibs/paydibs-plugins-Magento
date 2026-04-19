@@ -5,28 +5,18 @@
 namespace Paydibs\PaymentGateway\Block;
 
 use Magento\Framework\View\Element\Template\Context;
-use Magento\Payment\Model\Config;
-use Magento\Framework\Registry;
 
 class Info extends \Magento\Payment\Block\Info
 {
     /**
-     * @var Registry
-     */
-    protected $registry;
-
-    /**
      * @param Context $context
-     * @param Registry $registry
      * @param array $data
      */
     public function __construct(
         Context $context,
-        Registry $registry,
         array $data = []
     ) {
         parent::__construct($context, $data);
-        $this->registry = $registry;
     }
 
     /**
@@ -40,7 +30,11 @@ class Info extends \Magento\Payment\Block\Info
         $transport = parent::_prepareSpecificInformation($transport);
         $payment = $this->getInfo();
         
-        $methodTitle = $this->getMethod()->getConfigData('title', $payment->getOrder()->getStoreId());
+        $order = $payment->getOrder();
+        if (!$order) {
+            return $transport;
+        }
+        $methodTitle = $this->getMethod()->getConfigData('title', $order->getStoreId());
         if ($methodTitle) {
             $transport->addData([
                 'Method Title' => $methodTitle

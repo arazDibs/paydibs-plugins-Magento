@@ -40,6 +40,11 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>If enabled, products will be added back to cart when payment fails</comment>
                 </field>
+                <field id="manual_requery_secret" translate="label" type="obscure" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Manual Requery Secret Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>Optional. If set, calling paydibs/payment/requery?key=YOUR_SECRET runs the pending-order query job. Leave empty to disable.</comment>
+                </field>
             </group>
         </section>
     </system>

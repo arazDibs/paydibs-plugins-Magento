@@ -12,7 +12,6 @@ use Magento\Framework\Stdlib\DateTime\DateTime;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Sales\Model\Order;
 use Paydibs\PaymentGateway\Model\Service\PaymentQueryService;
-use Psr\Log\LoggerInterface;
 use Paydibs\PaymentGateway\Model\PaymentMethod;
 
 class QueryPendingOrders
@@ -38,11 +37,6 @@ class QueryPendingOrders
     protected $paymentQueryService;
 
     /**
-     * @var LoggerInterface
-     */
-    protected $logger;
-    
-    /**
      * @var PaymentMethod
      */
     protected $paymentMethod;
@@ -52,7 +46,6 @@ class QueryPendingOrders
      * @param OrderRepositoryInterface $orderRepository
      * @param DateTime $dateTime
      * @param PaymentQueryService $paymentQueryService
-     * @param LoggerInterface $logger
      * @param PaymentMethod $paymentMethod
      */
     public function __construct(
@@ -60,14 +53,12 @@ class QueryPendingOrders
         OrderRepositoryInterface $orderRepository,
         DateTime $dateTime,
         PaymentQueryService $paymentQueryService,
-        LoggerInterface $logger,
         PaymentMethod $paymentMethod
     ) {
         $this->searchCriteriaBuilder = $searchCriteriaBuilder;
         $this->orderRepository = $orderRepository;
         $this->dateTime = $dateTime;
         $this->paymentQueryService = $paymentQueryService;
-        $this->logger = $logger;
         $this->paymentMethod = $paymentMethod;
     }
 

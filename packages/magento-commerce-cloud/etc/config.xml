@@ -16,6 +16,7 @@
                 <payment_action>authorize</payment_action>
                 <sort_order>100</sort_order>
                 <is_initialize_needed>1</is_initialize_needed>
+                <manual_requery_secret backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </paydibs_payment_gateway>
         </payment>
     </default>

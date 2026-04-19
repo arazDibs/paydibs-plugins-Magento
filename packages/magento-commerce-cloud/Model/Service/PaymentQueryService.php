@@ -13,15 +13,11 @@ use Magento\Sales\Api\Data\OrderInterface;
 use Magento\Sales\Model\Order;
 use Magento\Sales\Model\Order\Payment\Transaction;
 use Magento\Sales\Api\OrderRepositoryInterface;
-use Magento\Sales\Api\TransactionRepositoryInterface;
 use Magento\Framework\DB\TransactionFactory;
 use Magento\Sales\Model\Service\InvoiceService;
 use Magento\Sales\Model\Order\Email\Sender\InvoiceSender;
 use Magento\Sales\Model\Order\Email\Sender\OrderSender;
 use Paydibs\PaymentGateway\Model\PaymentMethod;
-use Magento\Quote\Model\QuoteFactory;
-use Magento\Checkout\Model\Session;
-use Psr\Log\LoggerInterface;
 
 class PaymentQueryService
 {
@@ -41,29 +37,14 @@ class PaymentQueryService
     protected $paymentMethod;
 
     /**
-     * @var QuoteFactory
+     * @var QuoteManagement
      */
-    protected $quoteFactory;
-
-    /**
-     * @var Session
-     */
-    protected $checkoutSession;
-
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
+    private $quoteManagement;
 
     /**
      * @var OrderRepositoryInterface
      */
     protected $orderRepository;
-
-    /**
-     * @var TransactionRepositoryInterface
-     */
-    protected $transactionRepository;
 
     /**
      * @var TransactionFactory
@@ -89,9 +70,8 @@ class PaymentQueryService
      * @param Curl $curl
      * @param Json $json
      * @param PaymentMethod $paymentMethod
-     * @param LoggerInterface $logger
+     * @param QuoteManagement $quoteManagement
      * @param OrderRepositoryInterface $orderRepository
-     * @param TransactionRepositoryInterface $transactionRepository
      * @param TransactionFactory $transactionFactory
      * @param InvoiceService $invoiceService
      * @param InvoiceSender $invoiceSender
@@ -101,11 +81,8 @@ class PaymentQueryService
         Curl $curl,
         Json $json,
         PaymentMethod $paymentMethod,
-        QuoteFactory $quoteFactory,
-        Session $checkoutSession,
-        LoggerInterface $logger,
+        QuoteManagement $quoteManagement,
         OrderRepositoryInterface $orderRepository,
-        TransactionRepositoryInterface $transactionRepository,
         TransactionFactory $transactionFactory,
         InvoiceService $invoiceService,
         InvoiceSender $invoiceSender,
@@ -114,11 +91,8 @@ class PaymentQueryService
         $this->curl = $curl;
         $this->json = $json;
         $this->paymentMethod = $paymentMethod;
-        $this->quoteFactory = $quoteFactory;
-        $this->checkoutSession = $checkoutSession;
-        $this->logger = $logger;
+        $this->quoteManagement = $quoteManagement;
         $this->orderRepository = $orderRepository;
-        $this->transactionRepository = $transactionRepository;
         $this->transactionFactory = $transactionFactory;
         $this->invoiceService = $invoiceService;
         $this->invoiceSender = $invoiceSender;
@@ -152,61 +126,6 @@ class PaymentQueryService
         return $signature;
     }
 
-    /**
-     * Clear the cart by deactivating the quote
-     * Only called when payment is successful
-     *
-     * @param int $quoteId
-     * @return bool
-     */
-    protected function clearCart($quoteId)
-    {
-        try {
-            $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-            $quoteRepository = $objectManager->get('\Magento\Quote\Model\QuoteRepository');
-            
-            $quote = $this->quoteFactory->create()->loadByIdWithoutStore($quoteId);
-            if (!$quote->getId()) {
-                $this->paymentMethod->log('Response: Failed to clear cart - Quote not found for ID: ' . $quoteId);
-                return false;
-            }
-            
-            $quote->setIsActive(false);
-            $quoteRepository->save($quote);
-            
-            $this->paymentMethod->log('Response: Cart cleared for quote ID: ' . $quoteId);
-            return true;
-        } catch (\Exception $e) {
-            $this->paymentMethod->log('Response: Error clearing cart: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Restore quote 
-     *
-     * @param int $quoteId
-     * @return bool
-     */
-    protected function restoreQuote($quoteId)
-    {
-        try {
-            $quote = $this->quoteFactory->create()->loadByIdWithoutStore($quoteId);
-            if (!$quote->getId()) {
-                $this->paymentMethod->log('Response: Failed to restore quote - Quote not found for ID: ' . $quoteId);
-                return false;
-            }
-            
-            $quote->setIsActive(true)->setReservedOrderId(null)->save();
-            $this->checkoutSession->replaceQuote($quote);
-            $this->paymentMethod->log('Response: Quote successfully restored for ID: ' . $quoteId);
-            return true;
-        } catch (\Exception $e) {
-            $this->paymentMethod->log('Response: Error restoring quote: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
     /**
      * Verify signature for query response
      *
@@ -378,10 +297,10 @@ class PaymentQueryService
                     $order->setEmailSent(true);
                 }
                 
-                $order->save();
+                $this->orderRepository->save($order);
                 $this->paymentMethod->log('Query: Order #' . $order->getIncrementId() . ' updated to processing');
 
-                $this->clearCart($order->getQuoteId());
+                $this->quoteManagement->deactivateQuote($order->getQuoteId());
                 return true;
                 
             case '1': // Payment failed
@@ -392,7 +311,7 @@ class PaymentQueryService
                 if ($order->getState() == Order::STATE_CANCELED) {
                     $this->paymentMethod->log('Query: Order #' . $order->getIncrementId() . ' already canceled');
                     if ($this->paymentMethod->isCartRestorationEnabled()) {
-                        $this->restoreQuote($order->getQuoteId());
+                        $this->quoteManagement->restoreQuoteForCheckout($order->getQuoteId());
                         $this->paymentMethod->log('Query: Cart restored for order #' . $order->getIncrementId());
                     } else {
                         $this->paymentMethod->log('Query: Cart restoration disabled for order #' . $order->getIncrementId());
@@ -412,11 +331,11 @@ class PaymentQueryService
                             false
                         );
                     
-                    $order->save();
+                    $this->orderRepository->save($order);
                     $this->paymentMethod->log('Query: Order #' . $order->getIncrementId() . ' canceled');
                     
                     if ($this->paymentMethod->isCartRestorationEnabled()) {
-                        $this->restoreQuote($order->getQuoteId());
+                        $this->quoteManagement->restoreQuoteForCheckout($order->getQuoteId());
                         $this->paymentMethod->log('Query: Cart restored for order #' . $order->getIncrementId());
                     } else {
                         $this->paymentMethod->log('Query: Cart restoration disabled for order #' . $order->getIncrementId());
@@ -432,7 +351,8 @@ class PaymentQueryService
                 $order->addCommentToStatusHistory(
                     __('Payment still pending at Paydibs. Transaction ID: %1', $txnId),
                     Order::STATE_PENDING_PAYMENT
-                )->save();
+                );
+                $this->orderRepository->save($order);
                 return true;
                 
             default:

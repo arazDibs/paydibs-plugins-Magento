@@ -14,8 +14,12 @@ use Magento\Sales\Model\Order;
 use Magento\Sales\Model\Order\Payment\Transaction;
 use Magento\Sales\Model\Order\Payment\Transaction\BuilderInterface;
 use Paydibs\PaymentGateway\Model\PaymentMethod;
-use Magento\Quote\Model\QuoteFactory;
 use Magento\Checkout\Model\Session;
+use Magento\Sales\Model\Service\InvoiceService;
+use Magento\Framework\DB\TransactionFactory as DbTransactionFactory;
+use Magento\Sales\Model\Order\Email\Sender\InvoiceSender;
+use Magento\Sales\Api\OrderRepositoryInterface;
+use Paydibs\PaymentGateway\Model\Service\QuoteManagement;
 use Psr\Log\LoggerInterface;
 
 class Notify extends Action implements CsrfAwareActionInterface
@@ -41,14 +45,34 @@ class Notify extends Action implements CsrfAwareActionInterface
     protected $paymentMethod;
 
     /**
-     * @var QuoteFactory
-     */
-    protected $quoteFactory;
-    
-    /**
      * @var LoggerInterface
      */
     protected $_logger;
+
+    /**
+     * @var InvoiceService
+     */
+    private $invoiceService;
+
+    /**
+     * @var DbTransactionFactory
+     */
+    private $dbTransactionFactory;
+
+    /**
+     * @var InvoiceSender
+     */
+    private $invoiceSender;
+
+    /**
+     * @var QuoteManagement
+     */
+    private $quoteManagement;
+
+    /**
+     * @var OrderRepositoryInterface
+     */
+    private $orderRepository;
 
     /**
      * @param Context $context
@@ -57,7 +81,11 @@ class Notify extends Action implements CsrfAwareActionInterface
      * @param BuilderInterface $transactionBuilder
      * @param PaymentMethod $paymentMethod
      * @param LoggerInterface $logger
-     * @param QuoteFactory $quoteFactory
+     * @param InvoiceService $invoiceService
+     * @param DbTransactionFactory $dbTransactionFactory
+     * @param InvoiceSender $invoiceSender
+     * @param QuoteManagement $quoteManagement
+     * @param OrderRepositoryInterface $orderRepository
      */
     public function __construct(
         Context $context,
@@ -65,16 +93,24 @@ class Notify extends Action implements CsrfAwareActionInterface
         OrderFactory $orderFactory,
         BuilderInterface $transactionBuilder,
         PaymentMethod $paymentMethod,
-        QuoteFactory $quoteFactory,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        InvoiceService $invoiceService,
+        DbTransactionFactory $dbTransactionFactory,
+        InvoiceSender $invoiceSender,
+        QuoteManagement $quoteManagement,
+        OrderRepositoryInterface $orderRepository
     ) {
         parent::__construct($context);
         $this->checkoutSession = $checkoutSession;
         $this->orderFactory = $orderFactory;
         $this->transactionBuilder = $transactionBuilder;
         $this->paymentMethod = $paymentMethod;
-        $this->quoteFactory = $quoteFactory;
         $this->_logger = $logger;
+        $this->invoiceService = $invoiceService;
+        $this->dbTransactionFactory = $dbTransactionFactory;
+        $this->invoiceSender = $invoiceSender;
+        $this->quoteManagement = $quoteManagement;
+        $this->orderRepository = $orderRepository;
     }
 
     /**
@@ -88,7 +124,7 @@ class Notify extends Action implements CsrfAwareActionInterface
     /**
      * @inheritDoc
      */
-    public function validateForCsrf(RequestInterface $request): ?bool
+    public function validateForCsrf(RequestInterface $request): bool
     {
         return true;
     }
@@ -202,8 +238,7 @@ class Notify extends Action implements CsrfAwareActionInterface
                 // Create invoice
                 if ($order->canInvoice()) {
                     try {
-                        $invoiceService = $this->_objectManager->create(\Magento\Sales\Model\Service\InvoiceService::class);
-                        $invoice = $invoiceService->prepareInvoice($order);
+                        $invoice = $this->invoiceService->prepareInvoice($order);
                         if (!$invoice) {
                             throw new \Magento\Framework\Exception\LocalizedException(
                                 __('We can\'t create an invoice right now.')
@@ -211,30 +246,28 @@ class Notify extends Action implements CsrfAwareActionInterface
                         }
                         $invoice->setRequestedCaptureCase(\Magento\Sales\Model\Order\Invoice::CAPTURE_ONLINE);
                         $invoice->register();
-                        $transaction = $this->_objectManager->create(\Magento\Framework\DB\Transaction::class);
-                        $transaction->addObject($invoice)
-                                    ->addObject($invoice->getOrder())
-                                    ->save();
+                        $this->dbTransactionFactory->create()
+                            ->addObject($invoice)
+                            ->addObject($invoice->getOrder())
+                            ->save();
                         $order->addCommentToStatusHistory(
                             __('Invoice #%1 created.', $invoice->getIncrementId()),
                             false
                         );
-                        
+                        $this->invoiceSender->send($invoice);
                         $this->paymentMethod->log('Notify: Invoice created for order ' . $params['MerchantPymtID']);
-                        
                     } catch (\Exception $e) {
                         $this->paymentMethod->log('Notify: Error creating invoice: ' . $e->getMessage());
                     }
                 }
-                
+
                 $payment->setAdditionalInformation('processed_ptxn_id', $params['PTxnID']);
-                $payment->save();
-                $order->save();
+                $this->orderRepository->save($order);
                 
                 $this->paymentMethod->log('Notify: Payment successful for order ' . $params['MerchantPymtID']);
                 $result->setContents('OK');
                 
-                $this->clearCart($order->getQuoteId());
+                $this->quoteManagement->deactivateQuote($order->getQuoteId());
                 
                 return $result;
             } else {
@@ -253,9 +286,7 @@ class Notify extends Action implements CsrfAwareActionInterface
                         
                         $payment = $order->getPayment();
                         $payment->setAdditionalInformation('processed_ptxn_id', $params['PTxnID']);
-                        $payment->save();
-                        
-                        $order->save();
+                        $this->orderRepository->save($order);
                         $this->paymentMethod->log('Notify: Payment pending for order ' . $params['MerchantPymtID']);
                         $result->setContents('OK');
                         return $result;
@@ -270,7 +301,7 @@ class Notify extends Action implements CsrfAwareActionInterface
                             if ($order->getState() === \Magento\Sales\Model\Order::STATE_CANCELED) {
                                 $this->paymentMethod->log('Notify: Order ' . $params['MerchantPymtID'] . ' already canceled, likely handled by Response.php');
                                 if ($this->paymentMethod->isCartRestorationEnabled()) {
-                                    $this->restoreQuote($order->getQuoteId());
+                                    $this->quoteManagement->restoreQuoteForCheckout($order->getQuoteId());
                                 }
                             } else {
                                 foreach ($order->getAllItems() as $item) {
@@ -286,13 +317,11 @@ class Notify extends Action implements CsrfAwareActionInterface
                             
                             $payment = $order->getPayment();
                             $payment->setAdditionalInformation('processed_ptxn_id', $params['PTxnID']);
-                            $payment->save();
-                                
-                            $order->save();
+                            $this->orderRepository->save($order);
                             $this->paymentMethod->log('Notify: Payment failed for order ' . $params['MerchantPymtID'] . '. Status: ' . $txnStatus . ', Error: ' . $errorMessage);
                             
                             if ($this->paymentMethod->isCartRestorationEnabled()) {
-                                $this->restoreQuote($order->getQuoteId());
+                                $this->quoteManagement->restoreQuoteForCheckout($order->getQuoteId());
                                 $this->paymentMethod->log('Notify: Cart restored for order ' . $params['MerchantPymtID']);
                             } else {
                                 $this->paymentMethod->log('Notify: Cart restoration disabled for order ' . $params['MerchantPymtID']);
@@ -312,61 +341,6 @@ class Notify extends Action implements CsrfAwareActionInterface
         }
     }
 
-    /**
-     * Clear the cart by deactivating the quote
-     * Only called when payment is successful
-     *
-     * @param int $quoteId
-     * @return bool
-     */
-    protected function clearCart($quoteId)
-    {
-        try {
-            $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-            $quoteRepository = $objectManager->get('\Magento\Quote\Model\QuoteRepository');
-            
-            $quote = $this->quoteFactory->create()->loadByIdWithoutStore($quoteId);
-            if (!$quote->getId()) {
-                $this->paymentMethod->log('Response: Failed to clear cart - Quote not found for ID: ' . $quoteId);
-                return false;
-            }
-            
-            $quote->setIsActive(false);
-            $quoteRepository->save($quote);
-            
-            $this->paymentMethod->log('Response: Cart cleared for quote ID: ' . $quoteId);
-            return true;
-        } catch (\Exception $e) {
-            $this->paymentMethod->log('Response: Error clearing cart: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Restore quote
-     *
-     * @param int $quoteId
-     * @return bool
-     */
-    protected function restoreQuote($quoteId)
-    {
-        try {
-            $quote = $this->quoteFactory->create()->loadByIdWithoutStore($quoteId);
-            if (!$quote->getId()) {
-                $this->paymentMethod->log('Response: Failed to restore quote - Quote not found for ID: ' . $quoteId);
-                return false;
-            }
-            
-            $quote->setIsActive(true)->setReservedOrderId(null)->save();
-            $this->checkoutSession->replaceQuote($quote);
-            $this->paymentMethod->log('Response: Quote successfully restored for ID: ' . $quoteId);
-            return true;
-        } catch (\Exception $e) {
-            $this->paymentMethod->log('Response: Error restoring quote: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
     /**
      * Verify signature from Paydibs response
      *

@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright Paydibs. All rights reserved.
+ * Copyright © Paydibs. All rights reserved.
  */
 namespace Paydibs\PaymentGateway\Model;
 

@@ -12,6 +12,7 @@ use Magento\Framework\Controller\Result\JsonFactory;
 use Paydibs\PaymentGateway\Model\PaymentMethod;
 use Magento\Framework\HTTP\PhpEnvironment\RemoteAddress;
 use Psr\Log\LoggerInterface;
+use Paydibs\PaymentGateway\Model\Service\QuoteManagement;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\RequestInterface;
@@ -49,6 +50,11 @@ class Prepare extends Action implements CsrfAwareActionInterface
     protected $_logger;
 
     /**
+     * @var QuoteManagement
+     */
+    private $quoteManagement;
+
+    /**
      * @param Context $context
      * @param Session $checkoutSession
      * @param OrderFactory $orderFactory
@@ -56,6 +62,7 @@ class Prepare extends Action implements CsrfAwareActionInterface
      * @param JsonFactory $jsonFactory
      * @param RemoteAddress $remoteAddress
      * @param LoggerInterface $logger
+     * @param QuoteManagement $quoteManagement
      */
     public function __construct(
         Context $context,
@@ -64,7 +71,8 @@ class Prepare extends Action implements CsrfAwareActionInterface
         PaymentMethod $paymentMethod,
         JsonFactory $jsonFactory,
         RemoteAddress $remoteAddress,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        QuoteManagement $quoteManagement
     ) {
         parent::__construct($context);
         $this->checkoutSession = $checkoutSession;
@@ -73,6 +81,7 @@ class Prepare extends Action implements CsrfAwareActionInterface
         $this->jsonFactory = $jsonFactory;
         $this->remoteAddress = $remoteAddress;
         $this->_logger = $logger;
+        $this->quoteManagement = $quoteManagement;
     }
     
     /**
@@ -200,21 +209,7 @@ class Prepare extends Action implements CsrfAwareActionInterface
                 $this->paymentMethod->log('Prepare: No quote ID found for order #' . $order->getIncrementId());
                 return;
             }
-            
-            $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-            $quoteRepository = $objectManager->get('\Magento\Quote\Model\QuoteRepository');
-            $quoteFactory = $objectManager->get('\Magento\Quote\Model\QuoteFactory');
-            
-            $quote = $quoteFactory->create()->loadByIdWithoutStore($quoteId);
-            if (!$quote->getId()) {
-                $this->paymentMethod->log('Prepare: Quote not found for ID: ' . $quoteId);
-                return;
-            }
-            
-            $quote->setIsActive(1);
-            $quoteRepository->save($quote);
-            $this->checkoutSession->replaceQuote($quote);
-            
+            $this->quoteManagement->reactivateQuoteInSession($quoteId);
         } catch (\Exception $e) {
             $this->paymentMethod->log('Prepare: Error preventing cart clearing: ' . $e->getMessage());
         }
